@@ -62,7 +62,12 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             /** refers to the last time a lock was taken (reserved) or updated (released, re-reserved) */
             @Column(name = "lock_timestamp", nullable = true)
-            var lockUpdateTime: Instant? = null
+            var lockUpdateTime: Instant? = null,
+
+            /** relevancy of the state to the vault */
+            @Column(name = "is_relevant")
+            var isRelevant: Boolean = true
+
     ) : PersistentState()
 
     @Entity

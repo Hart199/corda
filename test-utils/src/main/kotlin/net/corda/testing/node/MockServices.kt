@@ -219,6 +219,7 @@ fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRo
 
 fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1, CashSchemaV1),
                                     keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
+                                    storeIrrelevantStates: Boolean = false,
                                     createIdentityService: () -> IdentityService = { makeTestIdentityService() }): Pair<CordaPersistence, MockServices> {
     val dataSourceProps = makeTestDataSourceProperties()
     val databaseProperties = makeTestDatabaseProperties()

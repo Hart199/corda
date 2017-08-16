@@ -47,7 +47,10 @@ import javax.persistence.criteria.Predicate
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsToken(), VaultService {
+class NodeVaultService
+@JvmOverloads
+constructor(private val services: ServiceHub,
+            private val storeIrrelevantStates: Boolean = false) : SingletonSerializeAsToken(), VaultService {
 
     private companion object {
         val log = loggerFor<NodeVaultService>()
@@ -78,7 +81,8 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
                         contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
-                        recordedTime = services.clock.instant())
+                        recordedTime = services.clock.instant(),
+                        isRelevant = isRelevant(it.value.state.data, ourKeys))
                 state.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(state)
             }
@@ -147,7 +151,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val ourKeys = services.keyManagementService.keys
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
             val ourNewStates = tx.outputs.
-                    filter { isRelevant(it.data, ourKeys) }.
+                    filter { storeIrrelevantStates || isRelevant(it.data, ourKeys) }.
                     map { tx.outRef<ContractState>(it.data) }
 
             // Retrieve all unconsumed states for this transaction's inputs
@@ -178,7 +182,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
                     zip(ltx.outputs).
                     filter {
                         (_, output) ->
-                        isRelevant(output.data, ourKeys)
+                        storeIrrelevantStates || isRelevant(output.data, ourKeys)
                     }.
                     unzip()
 
