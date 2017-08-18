@@ -14,8 +14,6 @@ import net.corda.nodeapi.RPCException
 import net.corda.nodeapi.internal.serialization.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.EmptyWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY

@@ -11,15 +11,12 @@ import kotlin.reflect.jvm.javaConstructor
 /**
  * Responsible for serializing and deserializing a regular object instance via a series of properties (matched with a constructor).
  */
-class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
+open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type get() = clazz
-    private val javaConstructor: Constructor<Any>?
-    internal val propertySerializers: Collection<PropertySerializer>
+    open internal val propertySerializers: Collection<PropertySerializer>
+    open val kotlinConstructor = constructorForDeserialization(clazz)
 
     init {
-        println ("Object Serializer")
-        val kotlinConstructor = constructorForDeserialization(clazz)
-        javaConstructor = kotlinConstructor?.javaConstructor
         propertySerializers = propertiesForSerialization(kotlinConstructor, clazz, factory)
     }
 
@@ -28,7 +25,7 @@ class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerial
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
     private val interfaces = interfacesForSerialization(clazz) // TODO maybe this proves too much and we need annotations to restrict.
 
-    internal val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())
+    open internal val typeNotation : TypeNotation by lazy {CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields()) }
 
     override fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {
@@ -74,9 +71,9 @@ class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerial
 
 
     fun construct(properties: List<Any?>): Any {
-        if (javaConstructor == null) {
+        val javaConstructor = kotlinConstructor?.javaConstructor ?:
             throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
-        }
+
         return javaConstructor.newInstance(*properties.toTypedArray())
     }
 }
