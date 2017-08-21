@@ -1,9 +1,9 @@
 package net.corda.node.services.vault
 
+import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.FungibleAsset
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.VaultService
@@ -27,10 +27,8 @@ import org.junit.Test
 import java.util.*
 
 class VaultWithRelevancyTest : TestDependencyInjectionBase() {
-
     private lateinit var services: MockServices
     private lateinit var notaryServices: MockServices
-    private val vaultSvc: VaultService get() = services.vaultService
     private val vaultQuerySvc: VaultQueryService get() = services.vaultQueryService
     private lateinit var database: CordaPersistence
 
@@ -48,12 +46,14 @@ class VaultWithRelevancyTest : TestDependencyInjectionBase() {
     }
 
     @Test
-    fun `unconsumed states simple with irrelevant states`() {
+    fun `unconsumed states simple with different relevancy`() {
         database.transaction {
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
+            // Create some irrelevant states.
             services.fillWithSomeTestDeals(listOf("123", "456", "789"), relevantToMe = false)
-
+        }
+        database.transaction {
             vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Vault.Relevancy.IRRELEVANT)).apply {
                 Assertions.assertThat(states).hasSize(3)
                 Assertions.assertThat(statesMetadata).hasSize(3)
@@ -72,23 +72,24 @@ class VaultWithRelevancyTest : TestDependencyInjectionBase() {
     @Test
     fun `unconsumed cash balance for single currency with different relevancy`() {
         database.transaction {
+            // Create some irrelevant states.
             services.fillWithSomeTestCash(100.DOLLARS, notaryServices, DUMMY_NOTARY, 1, 1, Random(0L), ownedBy = DUMMY_CASH_ISSUER.party)
             services.fillWithSomeTestCash(200.DOLLARS, notaryServices, DUMMY_NOTARY, 2, 2, Random(0L), ownedBy = DUMMY_CASH_ISSUER.party)
+            // Create some relevant states.
             services.fillWithSomeTestCash(300.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestCash(400.DOLLARS, notaryServices, DUMMY_NOTARY, 4, 4, Random(0L))
-
+        }
+        database.transaction {
             getBalance(Vault.Relevancy.RELEVANT).apply {
                 Assertions.assertThat(otherResults).hasSize(2)
                 Assertions.assertThat(otherResults[0]).isEqualTo(70000L)
                 Assertions.assertThat(otherResults[1]).isEqualTo("USD")
             }
-
             getBalance(Vault.Relevancy.IRRELEVANT).apply {
                 Assertions.assertThat(otherResults).hasSize(2)
                 Assertions.assertThat(otherResults[0]).isEqualTo(30000L)
                 Assertions.assertThat(otherResults[1]).isEqualTo("USD")
             }
-
             getBalance(Vault.Relevancy.ALL).apply {
                 Assertions.assertThat(otherResults).hasSize(2)
                 Assertions.assertThat(otherResults[0]).isEqualTo(100000L)
@@ -97,13 +98,13 @@ class VaultWithRelevancyTest : TestDependencyInjectionBase() {
         }
     }
 
-    private fun getBalance(relevancy: Vault.Relevancy): Vault.Page<FungibleAsset<*>> {
+    private fun getBalance(relevancy: Vault.Relevancy): Vault.Page<Cash.State> {
         val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
         val sumCriteria = QueryCriteria.VaultCustomQueryCriteria(sum, relevancy = relevancy)
 
         val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.equal(USD.currencyCode) }
         val ccyCriteria = QueryCriteria.VaultCustomQueryCriteria(ccyIndex, relevancy = relevancy)
 
-        return vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria.and(ccyCriteria))
+        return vaultQuerySvc.queryBy(sumCriteria.and(ccyCriteria))
     }
 }

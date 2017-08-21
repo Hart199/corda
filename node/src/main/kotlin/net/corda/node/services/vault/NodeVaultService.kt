@@ -82,7 +82,7 @@ constructor(private val services: ServiceHub,
                         contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
                         recordedTime = services.clock.instant(),
-                        isRelevant = isRelevant(it.value.state.data, ourKeys))
+                        isRelevant = isRelevant(stateAndRef.value.state.data, services.keyManagementService.keys))
                 state.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(state)
             }
