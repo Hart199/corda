@@ -113,6 +113,14 @@ has been supplied.
 
 .. note:: A pages maximum size ``MAX_PAGE_SIZE`` is defined as ``Int.MAX_VALUE`` and should be used with extreme caution as results returned may exceed your JVM's memory footprint.
 
+Relevancy
+---------
+The vault will not store any irrelevant state by default, the relevancy of the states are determined differently depends on the implementation of the ``ContractState``.
+For example, the relevancy of ``OwnableState`` is determined by checking if the vault is the owner of the state, and for ``LinearState``, ``isRelevant`` method is used to check for relevancy.
+The irrelevant state retention policy can be configured using the configuration file, see :doc:`corda-configuration-file` for more information.
+
+.. warning:: Since the vault won't store any irrelevant state by default, querying the vault with relevancy set to ``IRRELEVANT`` will not yield any result by default.
+
 Example usage
 -------------
 
@@ -385,7 +393,7 @@ The Corda Tutorials provide examples satisfying these additional Use Cases:
  .. _JPA: https://docs.spring.io/spring-data/jpa/docs/current/reference/html
 
 Upgrading from previous releases
----------------------------------
+--------------------------------
 
 Here follows a selection of the most common upgrade scenarios:
 
@@ -457,4 +465,3 @@ The query returns a ``Vault.Page`` result containing:
    .. sourcecode:: kotlin
 
 		val iouStates = services.vaultQueryBy<IOUState>()
- 

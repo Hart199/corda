@@ -55,18 +55,17 @@ class VaultWithRelevancyTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"), relevantToMe = false)
         }
         database.transaction {
-            vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Relevancy.IRRELEVANT)).apply {
-                Assertions.assertThat(states).hasSize(3)
-                Assertions.assertThat(statesMetadata).hasSize(3)
-            }
-            vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Relevancy.RELEVANT)).apply {
-                Assertions.assertThat(states).hasSize(13)
-                Assertions.assertThat(statesMetadata).hasSize(13)
-            }
-            vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Relevancy.ALL)).apply {
-                Assertions.assertThat(states).hasSize(16)
-                Assertions.assertThat(statesMetadata).hasSize(16)
-            }
+            val irrelevantStates = vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Relevancy.IRRELEVANT))
+            Assertions.assertThat(irrelevantStates.states).hasSize(3)
+            Assertions.assertThat(irrelevantStates.statesMetadata).hasSize(3)
+
+            val relevantStates = vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Relevancy.RELEVANT))
+            Assertions.assertThat(relevantStates.states).hasSize(13)
+            Assertions.assertThat(relevantStates.statesMetadata).hasSize(13)
+
+            val allStates = vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Relevancy.ALL))
+            Assertions.assertThat(allStates.states).hasSize(16)
+            Assertions.assertThat(allStates.statesMetadata).hasSize(16)
         }
     }
 
@@ -80,32 +79,30 @@ class VaultWithRelevancyTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestCash(300.DOLLARS, notaryServices, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestCash(400.DOLLARS, notaryServices, DUMMY_NOTARY, 4, 4, Random(0L))
         }
-        database.transaction {
-            getBalance(Relevancy.RELEVANT).apply {
-                Assertions.assertThat(otherResults).hasSize(2)
-                Assertions.assertThat(otherResults[0]).isEqualTo(70000L)
-                Assertions.assertThat(otherResults[1]).isEqualTo("USD")
-            }
-            getBalance(Relevancy.IRRELEVANT).apply {
-                Assertions.assertThat(otherResults).hasSize(2)
-                Assertions.assertThat(otherResults[0]).isEqualTo(30000L)
-                Assertions.assertThat(otherResults[1]).isEqualTo("USD")
-            }
-            getBalance(Relevancy.ALL).apply {
-                Assertions.assertThat(otherResults).hasSize(2)
-                Assertions.assertThat(otherResults[0]).isEqualTo(100000L)
-                Assertions.assertThat(otherResults[1]).isEqualTo("USD")
-            }
-        }
-    }
-
-    private fun getBalance(relevancy: Relevancy): Vault.Page<Cash.State> {
         val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
-        val sumCriteria = QueryCriteria.VaultCustomQueryCriteria(sum, relevancy = relevancy)
-
         val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.equal(USD.currencyCode) }
-        val ccyCriteria = QueryCriteria.VaultCustomQueryCriteria(ccyIndex, relevancy = relevancy)
 
-        return vaultQuerySvc.queryBy(sumCriteria.and(ccyCriteria))
+        database.transaction {
+            val relevantSumCriteria = QueryCriteria.VaultCustomQueryCriteria(sum)
+            val relevantCcyCriteria = QueryCriteria.VaultCustomQueryCriteria(ccyIndex)
+            val relevantCashStates = vaultQuerySvc.queryBy<Cash.State>(relevantSumCriteria.and(relevantCcyCriteria))
+            Assertions.assertThat(relevantCashStates.otherResults).hasSize(2)
+            Assertions.assertThat(relevantCashStates.otherResults[0]).isEqualTo(70000L)
+            Assertions.assertThat(relevantCashStates.otherResults[1]).isEqualTo("USD")
+
+            val irrelevantSumCriteria = QueryCriteria.VaultCustomQueryCriteria(sum, relevancy = Relevancy.IRRELEVANT)
+            val irrelevantCcyCriteria = QueryCriteria.VaultCustomQueryCriteria(ccyIndex, relevancy = Relevancy.IRRELEVANT)
+            val irrelevantCashStates = vaultQuerySvc.queryBy<Cash.State>(irrelevantSumCriteria.and(irrelevantCcyCriteria))
+            Assertions.assertThat(irrelevantCashStates.otherResults).hasSize(2)
+            Assertions.assertThat(irrelevantCashStates.otherResults[0]).isEqualTo(30000L)
+            Assertions.assertThat(irrelevantCashStates.otherResults[1]).isEqualTo("USD")
+
+            val allSumCriteria = QueryCriteria.VaultCustomQueryCriteria(sum, relevancy = Relevancy.ALL)
+            val allCcyCriteria = QueryCriteria.VaultCustomQueryCriteria(ccyIndex, relevancy = Relevancy.ALL)
+            val allCashStates = vaultQuerySvc.queryBy<Cash.State>(allSumCriteria.and(allCcyCriteria))
+            Assertions.assertThat(allCashStates.otherResults).hasSize(2)
+            Assertions.assertThat(allCashStates.otherResults[0]).isEqualTo(100000L)
+            Assertions.assertThat(allCashStates.otherResults[1]).isEqualTo("USD")
+        }
     }
 }
