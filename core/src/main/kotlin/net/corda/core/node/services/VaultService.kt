@@ -106,11 +106,6 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     }
 
     @CordaSerializable
-    enum class Relevancy {
-        RELEVANT, IRRELEVANT, ALL
-    }
-
-    @CordaSerializable
     enum class UpdateType {
         GENERAL, NOTARY_CHANGE
     }

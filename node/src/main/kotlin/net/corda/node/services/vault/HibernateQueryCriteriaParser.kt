@@ -398,8 +398,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         if (criteria.status != Vault.StateStatus.ALL)
             predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
 
-        if (criteria.relevancy != Vault.Relevancy.ALL)
-            predicateSet.add(criteriaBuilder.equal(vaultStates.get<Boolean>(VaultSchemaV1.VaultStates::isRelevant.name), criteria.relevancy == Vault.Relevancy.RELEVANT))
+        if (criteria.relevancy != Relevancy.ALL)
+            predicateSet.add(criteriaBuilder.equal(vaultStates.get<Boolean>(VaultSchemaV1.VaultStates::isRelevant.name), criteria.relevancy == Relevancy.RELEVANT))
 
         return predicateSet
     }

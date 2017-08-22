@@ -56,6 +56,11 @@ enum class AggregateFunctionType {
 }
 
 @CordaSerializable
+enum class Relevancy {
+    RELEVANT, IRRELEVANT, ALL
+}
+
+@CordaSerializable
 sealed class CriteriaExpression<O, out T> {
     data class BinaryLogical<O>(val left: CriteriaExpression<O, Boolean>, val right: CriteriaExpression<O, Boolean>, val operator: BinaryLogicalOperator) : CriteriaExpression<O, Boolean>()
     data class Not<O>(val expression: CriteriaExpression<O, Boolean>) : CriteriaExpression<O, Boolean>()

@@ -9,6 +9,7 @@ import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Relevancy
 import net.corda.core.node.services.vault.builder
 import net.corda.finance.DOLLARS
 import net.corda.finance.USD
@@ -54,15 +55,15 @@ class VaultWithRelevancyTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"), relevantToMe = false)
         }
         database.transaction {
-            vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Vault.Relevancy.IRRELEVANT)).apply {
+            vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Relevancy.IRRELEVANT)).apply {
                 Assertions.assertThat(states).hasSize(3)
                 Assertions.assertThat(statesMetadata).hasSize(3)
             }
-            vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Vault.Relevancy.RELEVANT)).apply {
+            vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Relevancy.RELEVANT)).apply {
                 Assertions.assertThat(states).hasSize(13)
                 Assertions.assertThat(statesMetadata).hasSize(13)
             }
-            vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Vault.Relevancy.ALL)).apply {
+            vaultQuerySvc.queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(relevancy = Relevancy.ALL)).apply {
                 Assertions.assertThat(states).hasSize(16)
                 Assertions.assertThat(statesMetadata).hasSize(16)
             }
@@ -80,17 +81,17 @@ class VaultWithRelevancyTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestCash(400.DOLLARS, notaryServices, DUMMY_NOTARY, 4, 4, Random(0L))
         }
         database.transaction {
-            getBalance(Vault.Relevancy.RELEVANT).apply {
+            getBalance(Relevancy.RELEVANT).apply {
                 Assertions.assertThat(otherResults).hasSize(2)
                 Assertions.assertThat(otherResults[0]).isEqualTo(70000L)
                 Assertions.assertThat(otherResults[1]).isEqualTo("USD")
             }
-            getBalance(Vault.Relevancy.IRRELEVANT).apply {
+            getBalance(Relevancy.IRRELEVANT).apply {
                 Assertions.assertThat(otherResults).hasSize(2)
                 Assertions.assertThat(otherResults[0]).isEqualTo(30000L)
                 Assertions.assertThat(otherResults[1]).isEqualTo("USD")
             }
-            getBalance(Vault.Relevancy.ALL).apply {
+            getBalance(Relevancy.ALL).apply {
                 Assertions.assertThat(otherResults).hasSize(2)
                 Assertions.assertThat(otherResults[0]).isEqualTo(100000L)
                 Assertions.assertThat(otherResults[1]).isEqualTo("USD")
@@ -98,7 +99,7 @@ class VaultWithRelevancyTest : TestDependencyInjectionBase() {
         }
     }
 
-    private fun getBalance(relevancy: Vault.Relevancy): Vault.Page<Cash.State> {
+    private fun getBalance(relevancy: Relevancy): Vault.Page<Cash.State> {
         val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
         val sumCriteria = QueryCriteria.VaultCustomQueryCriteria(sum, relevancy = relevancy)
 
