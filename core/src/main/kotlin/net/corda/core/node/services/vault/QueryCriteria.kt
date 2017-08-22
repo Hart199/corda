@@ -40,7 +40,6 @@ sealed class QueryCriteria {
 
     abstract class CommonQueryCriteria : QueryCriteria() {
         abstract val status: Vault.StateStatus
-        abstract val relevancy: Relevancy
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
         }
@@ -54,8 +53,7 @@ sealed class QueryCriteria {
                                                              val stateRefs: List<StateRef>? = null,
                                                              val notary: List<AbstractParty>? = null,
                                                              val softLockingCondition: SoftLockingCondition? = null,
-                                                             val timeCondition: TimeCondition? = null,
-                                                             override val relevancy: Relevancy = Relevancy.RELEVANT) : CommonQueryCriteria() {
+                                                             val timeCondition: TimeCondition? = null) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this as CommonQueryCriteria).plus(parser.parseCriteria(this))
         }
@@ -67,8 +65,7 @@ sealed class QueryCriteria {
     data class LinearStateQueryCriteria @JvmOverloads constructor(val participants: List<AbstractParty>? = null,
                                                                   val uuid: List<UUID>? = null,
                                                                   val externalId: List<String>? = null,
-                                                                  override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                                                                  override val relevancy: Relevancy = Relevancy.RELEVANT) : CommonQueryCriteria() {
+                                                                  override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this as CommonQueryCriteria).plus(parser.parseCriteria(this))
         }
@@ -86,8 +83,7 @@ sealed class QueryCriteria {
                                                                     val quantity: ColumnPredicate<Long>? = null,
                                                                     val issuer: List<AbstractParty>? = null,
                                                                     val issuerRef: List<OpaqueBytes>? = null,
-                                                                    override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                                                                    override val relevancy: Relevancy = Relevancy.RELEVANT) : CommonQueryCriteria() {
+                                                                    override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) : CommonQueryCriteria() {
        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
            return parser.parseCriteria(this as CommonQueryCriteria).plus(parser.parseCriteria(this))
        }
@@ -105,8 +101,7 @@ sealed class QueryCriteria {
      */
     data class VaultCustomQueryCriteria<L : PersistentState> @JvmOverloads constructor
                                     (val expression: CriteriaExpression<L, Boolean>,
-                                     override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                                     override val relevancy: Relevancy = Relevancy.RELEVANT) : CommonQueryCriteria() {
+                                     override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this as CommonQueryCriteria).plus(parser.parseCriteria(this))
         }

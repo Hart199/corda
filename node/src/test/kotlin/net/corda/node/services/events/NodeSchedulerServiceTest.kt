@@ -126,8 +126,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
         override val linearId = UniqueIdentifier()
 
-        override fun isRelevant(ourKeys: Set<PublicKey>): Boolean = true
-
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             return ScheduledActivity(flowLogicRef, instant)
         }

@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.containsAny
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.tee
@@ -32,7 +31,6 @@ import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
 import rx.Observable
 import rx.subjects.PublishSubject
-import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import javax.persistence.criteria.Predicate
@@ -47,10 +45,7 @@ import javax.persistence.criteria.Predicate
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeVaultService
-@JvmOverloads
-constructor(private val services: ServiceHub,
-            private val storeIrrelevantStates: Boolean = false) : SingletonSerializeAsToken(), VaultService {
+class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsToken(), VaultService {
 
     private companion object {
         val log = loggerFor<NodeVaultService>()
@@ -82,7 +77,7 @@ constructor(private val services: ServiceHub,
                         contractState = stateAndRef.value.state.serialize(context = STORAGE_CONTEXT).bytes,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
                         recordedTime = services.clock.instant(),
-                        isRelevant = isRelevant(stateAndRef.value.state.data, services.keyManagementService.keys))
+                        isRelevant = isRelevant(stateAndRef.value.state.data))
                 state.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(state)
             }
@@ -151,7 +146,7 @@ constructor(private val services: ServiceHub,
         val ourKeys = services.keyManagementService.keys
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState> {
             val ourNewStates = tx.outputs.
-                    filter { storeIrrelevantStates || isRelevant(it.data, ourKeys) }.
+                    filter { isRelevant(it.data) }.
                     map { tx.outRef<ContractState>(it.data) }
 
             // Retrieve all unconsumed states for this transaction's inputs
@@ -180,10 +175,7 @@ constructor(private val services: ServiceHub,
 
             val (consumedStateAndRefs, producedStates) = ltx.inputs.
                     zip(ltx.outputs).
-                    filter {
-                        (_, output) ->
-                        storeIrrelevantStates || isRelevant(output.data, ourKeys)
-                    }.
+                    filter { (_, output) -> isRelevant(output.data) }.
                     unzip()
 
             val producedStateAndRefs = producedStates.map { ltx.outRef<ContractState>(it.data) }
@@ -463,9 +455,8 @@ constructor(private val services: ServiceHub,
     }
 
     @VisibleForTesting
-    internal fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
-        is OwnableState -> state.owner.owningKey.containsAny(ourKeys)
-        is LinearState -> state.isRelevant(ourKeys)
-        else -> ourKeys.intersect(state.participants.map { it.owningKey }).isNotEmpty()
+    internal fun isRelevant(state: ContractState) = when (state) {
+        is OwnableState -> services.keyManagementService.filterMyKeys(listOf(state.owner.owningKey)).any()
+        else -> true
     }
 }

@@ -205,11 +205,6 @@ interface LinearState : ContractState {
      * except at issuance/termination.
      */
     val linearId: UniqueIdentifier
-
-    /**
-     * True if this should be tracked by our vault(s).
-     */
-    fun isRelevant(ourKeys: Set<PublicKey>): Boolean
 }
 // DOCEND 2
 

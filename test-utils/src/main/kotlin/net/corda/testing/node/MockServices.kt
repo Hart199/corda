@@ -87,9 +87,8 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
 
     lateinit var hibernatePersister: HibernateObserver
 
-    fun makeVaultService(hibernateConfig: HibernateConfiguration = HibernateConfiguration( { NodeSchemaService() }, makeTestDatabaseProperties(), { identityService }),
-                         storeIrrelevantStates: Boolean = false): VaultService {
-        val vaultService = NodeVaultService(this, storeIrrelevantStates)
+    fun makeVaultService(hibernateConfig: HibernateConfiguration = HibernateConfiguration( { NodeSchemaService() }, makeTestDatabaseProperties(), { identityService })): VaultService {
+        val vaultService = NodeVaultService(this)
         hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }
@@ -220,7 +219,6 @@ fun makeTestIdentityService() = InMemoryIdentityService(MOCK_IDENTITIES, trustRo
 
 fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1, CashSchemaV1),
                                     keys: List<KeyPair> = listOf(MEGA_CORP_KEY),
-                                    storeIrrelevantStates: Boolean = false,
                                     createIdentityService: () -> IdentityService = { makeTestIdentityService() }): Pair<CordaPersistence, MockServices> {
     val dataSourceProps = makeTestDataSourceProperties()
     val databaseProperties = makeTestDatabaseProperties()
@@ -228,7 +226,7 @@ fun makeTestDatabaseAndMockServices(customSchemas: Set<MappedSchema> = setOf(Com
     val database = configureDatabase(dataSourceProps, databaseProperties, createSchemaService, createIdentityService)
     val mockService = database.transaction {
         object : MockServices(*(keys.toTypedArray())) {
-            override val vaultService: VaultService = makeVaultService(database.hibernateConfig, storeIrrelevantStates)
+            override val vaultService: VaultService = makeVaultService(database.hibernateConfig)
 
             override fun recordTransactions(notifyVault: Boolean, txs: Iterable<SignedTransaction>) {
                 for (stx in txs) {
